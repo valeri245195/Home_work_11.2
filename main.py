@@ -4,18 +4,27 @@ from datetime import datetime
 
 class Field:
     def __init__(self, value):
-        self._value = value
+        if self.is_valid(value):
+            self.__value = value
+        else:
+            raise ValueError("Invalid value")
+
+    def is_valid(self, value):
+        return True
 
     def __str__(self):
-        return str(self._value)
+        return str(self.__value)
 
     @property
     def value(self):
-        return self._value
+        return self.__value
 
     @value.setter
     def value(self, new_value):
-        self._value = new_value
+        if self.is_valid(new_value):
+            self.__value = new_value
+        else:
+            raise ValueError("Invalid value")
 
 
 class Name(Field):
@@ -23,32 +32,21 @@ class Name(Field):
 
 
 class Phone(Field):
-    def __init__(self, value):
-        if value.isdigit() and len(value) == 10:
-            self.value = value
-        else:
-            raise ValueError("Invalid phone number")
 
-    @property
-    def value(self):
-        return self._value
+    def is_valid(self, value):
+        return self.value.isdigit() and len(self.value) == 10
 
-    @value.setter
-    def value(self, new_value):
-        if new_value.isdigit() and len(new_value) == 10:
-            self._value = new_value
-        else:
-            raise ValueError("Invalid phone number")
 
 
 class Birthday(Field):
-    def __init__(self, value):
+
+
+    def is_valid(self, value):
         try:
             datetime.strptime(value, '%Y-%m-%d')
+            return True
         except ValueError:
-            raise ValueError("Invalid birthday format, please use YYYY-MM-DD")
-        self.value = value
-
+            return False
 
 class Record:
     def __init__(self, name, birthday=None):
@@ -57,21 +55,22 @@ class Record:
         self.birthday = Birthday(birthday) if birthday else None
 
     def add_phone(self, phone):
-        self.phones.append(Phone(phone))
+        ph = Phone(phone)
+        self.phones.append(ph)
+        return ph
 
     def remove_phone(self, phone):
-        self.phones = [p for p in self.phones if str(p) != phone]
+        phones = [p for p in self.phones if p.value != phone]
+        if len(phones) == len(self.phones):
+            raise ValueError("Phone not found")
 
     def edit_phone(self, phone_old, phone_new):
-        for i, p in enumerate(self.phones):
-            if str(p) == phone_old:
-                self.phones[i] = Phone(phone_new)
-                return None
-        raise ValueError("Phone not found")
+        self.remove_phone(phone_old)
+        self.add_phone(phone_new)
 
     def find_phone(self, phone):
         for p in self.phones:
-            if str(p) == phone:
+            if p.value  == phone:
                 return p
         return None
 
@@ -89,7 +88,7 @@ class Record:
             return None
 
     def __str__(self):
-        return f"Contact name: {self.name.value}, phones: {'; '.join(str(p) for p in self.phones)}"
+        return f"Contact name: {str(name)}, phones: {'; '.join(str(p) for p in self.phones)}"
 
 
 class AddressBook(UserDict):
@@ -97,7 +96,7 @@ class AddressBook(UserDict):
         self.data[str(record.name.value)] = record
 
     def find(self, name):
-        return self.data.get(name)
+        return self.data.get(name, None)
 
     def delete(self, name):
         try:
@@ -105,7 +104,7 @@ class AddressBook(UserDict):
         except KeyError:
             pass
 
-    def __iter__(self, batch_size=10):
+    def iterator(self, batch_size=10):
         records = list(self.data.values())
         num_records = len(records)
         current_idx = 0
