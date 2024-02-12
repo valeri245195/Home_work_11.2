@@ -34,7 +34,7 @@ class Name(Field):
 class Phone(Field):
 
     def is_valid(self, value):
-        return self.value.isdigit() and len(self.value) == 10
+        return value.isdigit() and len(self.value) == 10
 
 
 
